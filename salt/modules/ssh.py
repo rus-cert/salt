@@ -141,6 +141,9 @@ def _replace_auth_key(
     lines = []
     full = _get_config_file(user, config)
 
+    # split into (options, type, key, comment); options might contain quoted whitespace
+    linere = re.compile(r'^\s*(?:((?:"(?:[^"\\]|\\.)*"|[^"\s]*)*)\s+)?((?:ssh-|ecds)\S*)\s+(\S+)(?:\s+(.*?)\s*)?$')
+
     try:
         # open the file for both reading AND writing
         with salt.utils.fopen(full, 'r') as _fh:
@@ -149,15 +152,12 @@ def _replace_auth_key(
                     # Commented Line
                     lines.append(line)
                     continue
-                comps = line.split()
-                if len(comps) < 2:
+                comps = re.search(linere, line)
+                if not comps:
                     # Not a valid line
                     lines.append(line)
                     continue
-                key_ind = 1
-                if comps[0][:4:] not in ['ssh-', 'ecds']:
-                    key_ind = 2
-                if comps[key_ind] == key:
+                if comps.group(3) == key:
                     lines.append(auth_line)
                 else:
                     lines.append(line)
